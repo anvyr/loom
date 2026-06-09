@@ -1,0 +1,12 @@
+parameters:
+    level: 8
+    paths:
+        - src
+    excludePaths:
+        - src/stubs
+    ignoreErrors:
+        - '#Unsafe usage of new static\(\)#'
+        - '#should be compatible with return type.*QueryBuilder#'
+        - '#Method Anvyr\\Loom\\Database\\ModelBuilder::get\(\) should return#'
+        - '#Call to an undefined static method Anvyr\\Loom\\Database\\QueryBuilder::__call\(\)#'
+        - '#Trait Anvyr\\Loom\\Database\\Concerns\\SoftDeletes is used zero times#'

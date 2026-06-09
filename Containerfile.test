@@ -1,0 +1,48 @@
+# Reproducible PHP runtime for QA and PHPUnit (matches CI extensions).
+# Keep extensions in sync with .github/workflows/tests.yml setup-php.
+#
+# Local:
+#   podman compose build test && podman compose run --rm test
+#   podman compose run --rm test composer qa
+#   podman compose run --rm test-external   # needs bundled Redis service
+#
+# One-off without Compose:
+#   podman build -f Containerfile.test --build-arg PHP_VERSION=8.5 -t anvyr-loom:test .
+#   podman run --rm anvyr-loom:test composer test
+#
+ARG PHP_VERSION=8.4
+FROM php:${PHP_VERSION}-cli-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        unzip \
+        libonig-dev \
+        libsqlite3-dev \
+        libzip-dev \
+        $PHPIZE_DEPS \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo_sqlite \
+        mbstring \
+        sockets \
+        zip \
+    && pecl install redis apcu \
+    && docker-php-ext-enable redis apcu \
+    && echo 'apc.enable_cli=1' >> /usr/local/etc/php/conf.d/docker-php-ext-apcu.ini \
+    && apt-get purge -y --auto-remove $PHPIZE_DEPS \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install --prefer-dist --no-interaction --no-progress --no-ansi
+
+COPY . .
+RUN composer dump-autoload -o --no-ansi \
+    && mkdir -p storage/cache \
+    && touch storage/database.sqlite
+
+CMD ["composer", "test"]

@@ -1,0 +1,38 @@
+# Official local test stack for Podman (`podman compose`).
+#
+#   PHP_VERSION=8.5 podman compose build test test-external
+#   podman compose run --rm test
+#   podman compose run --rm test composer qa
+#   podman compose run --rm test-external
+#
+services:
+  redis:
+    image: redis:8
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  test:
+    image: anvyr/loom-test:${PHP_VERSION:-8.4}
+    build:
+      context: .
+      dockerfile: Containerfile.test
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.4}
+
+  test-external:
+    image: anvyr/loom-test:${PHP_VERSION:-8.4}
+    build:
+      context: .
+      dockerfile: Containerfile.test
+      args:
+        PHP_VERSION: ${PHP_VERSION:-8.4}
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["composer", "test:external"]

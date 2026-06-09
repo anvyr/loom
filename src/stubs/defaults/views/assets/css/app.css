@@ -1,0 +1,202 @@
+/* Anvyr Loom — Default page stylesheet. */
+
+:root {
+    --loom-font-sans: "Space Grotesk", system-ui, sans-serif;
+    --loom-font-mono: "Space Mono", ui-monospace, monospace;
+
+    --loom-bg: #08080a;
+    --loom-surface: #101014;
+    --loom-surface-2: #16161c;
+
+    --loom-text: #f2f0ea;
+    --loom-muted: #a3a09a;
+    --loom-faint: #6f6b65;
+
+    --loom-border: rgba(255, 255, 255, 0.09);
+
+    --loom-gold: #c49a5c;
+
+    --loom-radius-sm: 12px;
+}
+
+/* Reset */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { min-height: 100%; }
+
+body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: var(--loom-font-sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--loom-text);
+    background: var(--loom-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+    background: color-mix(in srgb, var(--loom-gold) 35%, transparent);
+    color: var(--loom-text);
+}
+
+/* Links */
+
+a {
+    color: var(--loom-gold);
+    text-decoration: none;
+    transition: color 150ms ease;
+}
+
+a:hover { color: var(--loom-text); }
+
+/* Typography */
+
+h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    line-height: 1;
+    letter-spacing: -0.045em;
+    font-weight: 700;
+    margin: 0 0 24px;
+}
+
+h2 {
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    margin: 48px 0 16px;
+}
+
+h2:first-child { margin-top: 0; }
+
+h3 {
+    font-size: 18px;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    margin: 32px 0 12px;
+}
+
+p { margin: 0 0 16px; }
+
+strong { font-weight: 600; }
+
+/* Lists */
+
+ul, ol { margin: 0 0 24px; padding-left: 0; list-style: none; }
+
+li {
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 10px;
+}
+
+li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 6px;
+    height: 1px;
+    background: var(--loom-faint);
+}
+
+ol { counter-reset: step; }
+
+ol li { counter-increment: step; padding-left: 32px; }
+
+ol li::before {
+    content: counter(step) ".";
+    width: auto;
+    height: auto;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: none;
+    font-family: var(--loom-font-mono);
+    font-size: 13px;
+    color: var(--loom-faint);
+}
+
+/* Code */
+
+code {
+    font-family: var(--loom-font-mono);
+    font-size: 0.9em;
+}
+
+:not(pre) > code {
+    background: var(--loom-surface-2);
+    border: 1px solid var(--loom-border);
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+pre {
+    margin: 24px 0;
+    padding: 20px;
+    background: var(--loom-surface);
+    border: 1px solid var(--loom-border);
+    border-radius: var(--loom-radius-sm);
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+pre code {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: inherit;
+}
+
+/* Main */
+
+main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 80px 24px;
+    min-height: 50vh;
+}
+
+/* Footer */
+
+footer {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 24px 48px;
+    border-top: 1px solid var(--loom-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--loom-font-mono);
+    font-size: 12px;
+    color: var(--loom-faint);
+}
+
+footer a { color: var(--loom-faint); }
+footer a:hover { color: var(--loom-text); }
+
+/* Focus */
+
+:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--loom-bg), 0 0 0 4px var(--loom-gold);
+    border-radius: var(--loom-radius-sm);
+}
+
+/* Responsive */
+
+@media (max-width: 640px) {
+    main { padding: 48px 20px; }
+    footer { padding: 20px 20px 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

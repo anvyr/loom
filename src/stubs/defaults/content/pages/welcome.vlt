@@ -1,0 +1,41 @@
+---
+title: "Anvyr Loom"
+layout: default
+status: published
+excerpt: "Your installation is running."
+---
+
+@html
+<h1>Anvyr Loom</h1>
+
+<p>Your installation is running.</p>
+
+<h2>Getting started</h2>
+
+<ol>
+<li><strong>Edit this page.</strong> Open <code>user/content/pages/welcome.vlt</code> in your editor.</li>
+<li><strong>Create a page.</strong> Add a <code>.vlt</code> or <code>.md</code> file to <code>user/content/pages/</code>.</li>
+<li><strong>Customize the layout.</strong> Edit <code>user/views/layouts/default.velvet.php</code>.</li>
+<li><strong>Read the documentation.</strong> <a href="https://anvyr.dev/docs">anvyr.dev/docs</a></li>
+</ol>
+
+<h2>What Loom is</h2>
+
+<p>A PHP content application framework. File-native content, no database required. The CLI, module system, and multi-tenancy are optional layers on top.</p>
+
+<h2>CLI</h2>
+
+<pre><code>./loom list              Show available commands
+./loom diagnose          Run diagnostics
+./loom make:module       Scaffold a new module
+./loom migrate           Run database migrations
+./loom cache:clear       Clear all caches</code></pre>
+
+<h2>Links</h2>
+
+<ul>
+<li><a href="https://anvyr.dev/docs">Documentation</a></li>
+<li><a href="https://github.com/anvyr/loom">GitHub</a></li>
+<li><a href="https://github.com/anvyr/loom/blob/main/CONTRIBUTING.md">Contributing</a></li>
+</ul>
+@endhtml

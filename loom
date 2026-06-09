@@ -1,0 +1,203 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Anvyr Loom Command Line Interface
+ */
+
+// Find autoloader
+$autoloadPaths = [
+    __DIR__ . '/vendor/autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../vendor/autoload.php',
+    __DIR__ . '/../../../vendor/autoload.php',
+];
+
+$autoloadPath = null;
+foreach ($autoloadPaths as $path) {
+    if (file_exists($path)) {
+        $autoloadPath = $path;
+        break;
+    }
+}
+
+if (!$autoloadPath) {
+    fwrite(STDERR, "Error: Composer autoloader not found.\n");
+    fwrite(STDERR, "Run: composer install --no-dev \n");
+    exit(1);
+}
+
+require $autoloadPath;
+
+// Allow command-level tenant override before bootstrap: --tenant=<id> or --tenant <id>
+$tenantOverride = null;
+for ($i = 1; $i < count($argv); $i++) {
+    $arg = $argv[$i] ?? '';
+
+    if (str_starts_with($arg, '--tenant=')) {
+        $tenantOverride = substr($arg, strlen('--tenant='));
+        array_splice($argv, $i, 1);
+        break;
+    }
+
+    if ($arg === '--tenant') {
+        $tenantOverride = $argv[$i + 1] ?? null;
+        array_splice($argv, $i, $tenantOverride !== null ? 2 : 1);
+        break;
+    }
+}
+
+if (is_string($tenantOverride) && $tenantOverride !== '') {
+    $_ENV['TENANCY_TENANT'] = $tenantOverride;
+    $_SERVER['TENANCY_TENANT'] = $tenantOverride;
+    putenv('TENANCY_TENANT=' . $tenantOverride);
+}
+
+// Bootstrap application
+$app = null;
+try {
+    $app = require __DIR__ . '/bootstrap/app.php';
+    $app->make(\Anvyr\Loom\Core\Tenancy\TenancyManager::class)->bootstrapFromCli();
+    $app->boot();
+} catch (\Throwable $e) {
+    // If bootstrap fails, we might be in a fresh install
+    // Create minimal bootstrap for installation commands
+    if (!defined('LOOM_BASE_PATH')) {
+        define('LOOM_BASE_PATH', __DIR__);
+    }
+    
+    // Load helpers if available
+    if (file_exists(__DIR__ . '/src/Support/helpers.php')) {
+        require __DIR__ . '/src/Support/helpers.php';
+    }
+}
+
+use Anvyr\Loom\Commands\CommandRegistry;
+use Anvyr\Loom\Commands\ListCommand;
+use Anvyr\Loom\Commands\HelpCommand;
+use Anvyr\Loom\Commands\VersionCommand;
+use Anvyr\Loom\Commands\InstallCommand;
+use Anvyr\Loom\Commands\MigrateCommand;
+use Anvyr\Loom\Commands\Cache\ClearCommand as CacheClearCommand;
+use Anvyr\Loom\Commands\Config\CacheCommand as ConfigCacheCommand;
+use Anvyr\Loom\Commands\Config\ClearCommand as ConfigClearCommand;
+use Anvyr\Loom\Commands\Config\ListCommand as ConfigListCommand;
+use Anvyr\Loom\Commands\Config\GetCommand as ConfigGetCommand;
+use Anvyr\Loom\Commands\Config\SetCommand as ConfigSetCommand;
+use Anvyr\Loom\Commands\Config\PublishCommand as ConfigPublishCommand;
+use Anvyr\Loom\Commands\ServeCommand;
+use Anvyr\Loom\Commands\Page\MakeCommand as PageMakeCommand;
+use Anvyr\Loom\Commands\Page\ListCommand as PageListCommand;
+use Anvyr\Loom\Commands\Page\PublishCommand as PagePublishCommand;
+use Anvyr\Loom\Commands\Page\DeleteCommand as PageDeleteCommand;
+use Anvyr\Loom\Commands\OptimizeCommand;
+use Anvyr\Loom\Commands\MigrateTenantsCommand;
+use Anvyr\Loom\Commands\Module\ProvisionModuleCommand;
+
+$registry = new CommandRegistry();
+
+if ($app) {
+    $registry->setApp($app);
+
+    try {
+        $app->instance(CommandRegistry::class, $registry);
+        $app->alias(CommandRegistry::class, 'commands');
+
+        $events = $app->make('events');
+        $events->dispatch('commands.registering', $registry);
+    } catch (\Throwable $e) {
+        // If the event dispatcher is unavailable, continue without module commands
+    }
+}
+
+// Register commands that don't need full app
+$registry->register('version', VersionCommand::class);
+$registry->register('install', InstallCommand::class);
+$registry->register('serve', ServeCommand::class);
+$registry->register('cache:clear', CacheClearCommand::class);
+$registry->register('config:cache', ConfigCacheCommand::class);
+$registry->register('config:clear', ConfigClearCommand::class);
+$registry->register('config:list', ConfigListCommand::class);
+$registry->register('config:get', ConfigGetCommand::class);
+$registry->register('config:set', ConfigSetCommand::class);
+$registry->register('config:publish', ConfigPublishCommand::class);
+$registry->register('route:clear', \Anvyr\Loom\Commands\Route\ClearCommand::class);
+$registry->register('diagnose', \Anvyr\Loom\Commands\DiagnoseCommand::class);
+
+// Register commands that need full app (if available)
+if ($app) {
+    try {
+        $app->make('pages');
+
+        $registry->register('page:make', PageMakeCommand::class);
+        $registry->register('page:list', PageListCommand::class);
+        $registry->register('page:publish', PagePublishCommand::class);
+        $registry->register('page:delete', PageDeleteCommand::class);
+        $registry->register('index:rebuild', \Anvyr\Loom\Commands\Page\IndexRebuildCommand::class);
+        $registry->register('migrate', MigrateCommand::class);
+        $registry->register('migrate:tenants', MigrateTenantsCommand::class);
+        $registry->register('optimize', OptimizeCommand::class);
+        $registry->register('route:cache', \Anvyr\Loom\Commands\Route\CacheCommand::class);
+
+        $registry->register('make:controller', \Anvyr\Loom\Commands\Make\MakeControllerCommand::class);
+        $registry->register('make:middleware', \Anvyr\Loom\Commands\Make\MakeMiddlewareCommand::class);
+        $registry->register('make:model', \Anvyr\Loom\Commands\Make\MakeModelCommand::class);
+        $registry->register('make:command', \Anvyr\Loom\Commands\Make\MakeConsoleCommand::class);
+        $registry->register('make:module', \Anvyr\Loom\Commands\Make\MakeModuleCommand::class);
+
+        $registry->register('module:list', \Anvyr\Loom\Commands\Module\ListModuleCommand::class);
+        $registry->register('module:info', \Anvyr\Loom\Commands\Module\InfoModuleCommand::class);
+        $registry->register('module:compile', \Anvyr\Loom\Commands\Module\CompileModuleCommand::class);
+        $registry->register('module:provision', ProvisionModuleCommand::class);
+        $registry->register('module:enable', \Anvyr\Loom\Commands\Module\EnableModuleCommand::class);
+        $registry->register('module:disable', \Anvyr\Loom\Commands\Module\DisableModuleCommand::class);
+    } catch (\Throwable $e) {
+        // Services not available, skip
+    }
+}
+
+// List command needs special handling (needs registry)
+// We'll register it but handle instantiation specially
+$registry->register('list', ListCommand::class);
+$registry->register('help', HelpCommand::class);
+
+// Parse command line arguments
+[$commandName, $arguments, $options] = $registry->parseArgv($argv);
+
+if (!$commandName) {
+    $versionRegistry = $app !== null
+        ? $app->make(\Anvyr\Loom\Core\VersionRegistry::class)
+        : null;
+
+    if ($versionRegistry === null) {
+        fwrite(STDERR, "Error: application services are unavailable.\n");
+        exit(1);
+    }
+
+    $coreVersion = $versionRegistry->getVersion('core');
+
+    echo "\033[1mAnvyr Loom\033[0m \033[33m{$coreVersion}\033[0m\n";
+
+    $modules = $versionRegistry->getModules();
+    if (!empty($modules)) {
+        echo "\033[90mModules:\033[0m";
+        foreach ($modules as $name => $meta) {
+            $moduleVersion = $meta['version'] ?? 'unknown';
+            $stability = $meta['stability'] ?? null;
+            $suffix = $stability ? sprintf('%s (%s)', $moduleVersion, $stability) : $moduleVersion;
+            echo " {$name}@{$suffix}";
+        }
+        echo "\n";
+    }
+
+    echo "\n\033[33mUsage:\033[0m\n";
+    echo "  loom <command> [arguments] [options]\n\n";
+    echo "Run '\033[36mloom list\033[0m' to see all available commands\n";
+    echo "Run '\033[36mloom help <command>\033[0m' for command help\n\n";
+    exit(0);
+}
+
+$exitCode = $registry->run($commandName, $arguments, $options);
+exit($exitCode);
